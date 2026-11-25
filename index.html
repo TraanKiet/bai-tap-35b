@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bài tập 35b - Đồng hồ đếm ngược</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #0f172a;
+      color: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .timer-card {
+      background-color: #1e293b;
+      width: 100%;
+      max-width: 460px;
+      padding: 36px 28px;
+      border-radius: 16px;
+      border: 1px solid #334155;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 24px;
+      color: #38bdf8;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .student-info {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-bottom: 28px;
+    }
+
+    /* Khung hiển thị đồng hồ MM:SS */
+    .display-box {
+      background-color: #0f172a;
+      border: 2px solid #38bdf8;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 28px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    #timerDisplay {
+      font-size: 64px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums; /* Giữ độ rộng các chữ số đều nhau không bị giật khung */
+      color: #f8fafc;
+      letter-spacing: 3px;
+    }
+
+    /* Animation cảnh báo khi thời gian còn dưới 1 phút (< 60 giây) */
+    @keyframes pulseWarning {
+      0% {
+        transform: scale(1);
+        color: #ef4444;
+        text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      }
+      50% {
+        transform: scale(1.06);
+        color: #fca5a5;
+        text-shadow: 0 0 22px rgba(239, 68, 68, 0.9);
+      }
+      100% {
+        transform: scale(1);
+        color: #ef4444;
+        text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      }
+    }
+
+    .display-box.warning {
+      border-color: #ef4444;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+    }
+
+    .display-box.warning #timerDisplay {
+      animation: pulseWarning 1s infinite ease-in-out;
+    }
+
+    /* Các nút điều khiển */
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 20px;
+      font-size: 15px;
+      font-weight: bold;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+
+    button:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
+    #startBtn { background-color: #22c55e; color: #052e16; }
+    #pauseBtn { background-color: #eab308; color: #422006; }
+    #resetBtn { background-color: #64748b; color: #ffffff; }
+    #testUnder1MinBtn {
+      margin-top: 16px;
+      background-color: transparent;
+      border: 1px dashed #94a3b8;
+      color: #94a3b8;
+      font-size: 13px;
+      padding: 8px 14px;
+    }
+
+    /* Modal Alert thông báo khi hết thời gian */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+
+    .modal-backdrop.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background-color: #1e293b;
+      border: 2px solid #ef4444;
+      border-radius: 14px;
+      max-width: 380px;
+      width: 100%;
+      padding: 28px 24px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      animation: modalPop 0.25s ease-out;
+    }
+
+    @keyframes modalPop {
+      from { transform: scale(0.85); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .modal-content h2 {
+      color: #ef4444;
+      font-size: 26px;
+      margin-bottom: 10px;
+    }
+
+    .modal-content p {
+      color: #cbd5e1;
+      font-size: 16px;
+      margin-bottom: 22px;
+      line-height: 1.5;
+    }
+
+    #closeModalBtn {
+      background-color: #ef4444;
+      color: #ffffff;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="timer-card">
+    <h1>Đồng Hồ Đếm Ngược</h1>
+    <div class="student-info">SV: Trần Tuấn Kiệt | MSSV: [241A010243]</div>
+
+    <div class="display-box" id="displayBox">
+      <div id="timerDisplay">10:00</div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn">Bắt đầu</button>
+      <button id="pauseBtn" disabled>Tạm dừng</button>
+      <button id="resetBtn">Đặt lại</button>
+    </div>
+
+    <!-- Nút phụ trợ để test nhanh hiệu ứng dưới 1 phút (00:10) lúc chụp hình nộp bài -->
+    <div>
+      <button id="testUnder1MinBtn" title="Chuyển nhanh về 10 giây cuối để kiểm tra hiệu ứng cảnh báo">
+        Test nhanh mốc dưới 1 phút (00:10)
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal Alert khi hết giờ -->
+  <div class="modal-backdrop" id="alertModal" role="dialog" aria-modal="true">
+    <div class="modal-content">
+      <h2>HẾT THỜI GIAN!</h2>
+      <p>Đồng hồ đếm ngược 10 phút đã kết thúc.</p>
+      <button id="closeModalBtn">Đóng thông báo</button>
+    </div>
+  </div>
+
+  <script>
+    const INITIAL_SECONDS = 10 * 60; // 10 phút = 600 giây
+    let remainingSeconds = INITIAL_SECONDS;
+    let intervalId = null; // Lưu ID của setInterval để kiểm soát và giải phóng bộ nhớ
+
+    const displayBox = document.getElementById('displayBox');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const testUnder1MinBtn = document.getElementById('testUnder1MinBtn');
+    const alertModal = document.getElementById('alertModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+
+    // Hàm định dạng số giây sang chuẩn MM:SS (ví dụ: 65 -> "01:05")
+    function formatTime(totalSeconds) {
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const paddedMinutes = String(minutes).padStart(2, '0');
+      const paddedSeconds = String(seconds).padStart(2, '0');
+      return `${paddedMinutes}:${paddedSeconds}`;
+    }
+
+    // Hàm cập nhật giao diện và kiểm tra điều kiện dưới 1 phút
+    function updateUI() {
+      timerDisplay.textContent = formatTime(remainingSeconds);
+
+      // Thêm hiệu ứng CSS animation khi thời gian còn dưới 1 phút (< 60s và > 0s)
+      if (remainingSeconds > 0 && remainingSeconds < 60) {
+        displayBox.classList.add('warning');
+      } else {
+        displayBox.classList.remove('warning');
+      }
+    }
+
+    // Hàm dọn dẹp interval an toàn để tránh memory leak và chạy chồng chéo
+    function stopTimer() {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    // Hàm bắt đầu đếm ngược
+    function startTimer() {
+      // Bảo vệ: Nếu interval đang chạy hoặc đã hết giờ thì không tạo thêm timer mới
+      if (intervalId !== null || remainingSeconds <= 0) return;
+
+      startBtn.disabled = true;
+      pauseBtn.disabled = false;
+
+      intervalId = setInterval(() => {
+        remainingSeconds--;
+        updateUI();
+
+        // Khi đồng hồ về 0 -> Dừng interval và bật Modal Alert
+        if (remainingSeconds <= 0) {
+          stopTimer();
+          startBtn.disabled = true;
+          pauseBtn.disabled = true;
+          alertModal.classList.add('show');
+        }
+      }, 1000);
+    }
+
+    // Hàm tạm dừng
+    function pauseTimer() {
+      stopTimer();
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+    }
+
+    // Hàm đặt lại về 10:00 ban đầu
+    function resetTimer() {
+      stopTimer();
+      remainingSeconds = INITIAL_SECONDS;
+      updateUI();
+      startBtn.disabled = false;
+      pauseBtn.disabled = true;
+      alertModal.classList.remove('show');
+    }
+
+    // Gắn sự kiện cho các nút
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    closeModalBtn.addEventListener('click', () => {
+      alertModal.classList.remove('show');
+    });
+
+    // Nút test nhanh mốc 10 giây cuối
+    testUnder1MinBtn.addEventListener('click', () => {
+      stopTimer();
+      remainingSeconds = 10;
+      updateUI();
+      startTimer();
+    });
+
+    // Dọn dẹp bộ nhớ khi người dùng rời khỏi hoặc tải lại trang
+    window.addEventListener('beforeunload', stopTimer);
+
+    // Khởi tạo giao diện ban đầu
+    updateUI();
+  </script>
+
+</body>
+</html>
